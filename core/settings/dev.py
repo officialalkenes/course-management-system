@@ -55,8 +55,3 @@ EMAIL_HOST_PASSWORD = os.getenv(  # noqa
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL", "belloabdulhakeemolamide@gmail.com"
 )  # noqa
-
-# Twilio
-# TWILIO_ACCOUNT_SID = config("TWILIO_ACCOUNT_SID", "")
-# TWILIO_AUTH_TOKEN = config("TWILIO_AUTH_TOKEN", "")
-# SMS_ROUTE = config("SMS_ROUTE", "")
