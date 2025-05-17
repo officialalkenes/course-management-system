@@ -2,7 +2,7 @@ import logging
 from celery import shared_task
 from django.contrib.auth import get_user_model
 
-from apps.abstract.utils.accounts_utils import (
+from apps.user.utils import (
     initiate_password_reset,
     send_otp_email,
     send_otp_sms,

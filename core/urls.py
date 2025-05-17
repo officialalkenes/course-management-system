@@ -17,12 +17,6 @@ urlpatterns = [
 # You defer the decision to view-level or middleware-level behavior
 public_only_urls = [
     path("admin/", admin.site.urls),
-    path("api/tenant/", include("apps.tenant.urls")),
-]
-
-# Tenant-only routes
-tenant_only_urls = [
-    path("api/subscription/", include("apps.subscription.urls")),
 ]
 
 # Swagger only in debug
@@ -41,7 +35,7 @@ debug_only_urls = [
 ]
 
 # Use middleware or per-app logic to handle schema separation at runtime
-urlpatterns += public_only_urls + tenant_only_urls
+urlpatterns += public_only_urls
 
 if settings.DEBUG:
     urlpatterns += debug_only_urls
