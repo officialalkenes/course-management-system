@@ -186,7 +186,7 @@ SIMPLE_JWT = {
 
 REST_USE_JWT = True
 
-# AUTH_USER_MODEL = "user.User"
+AUTH_USER_MODEL = "user.User"
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "SaaSEducator Project API",
