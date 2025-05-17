@@ -1,0 +1,16 @@
+# bandit.yaml
+exclude_dirs:
+  - "tests"
+  - "test_*"
+  - "migrations"
+  - "migrations/*"
+
+# Tests to include
+tests:
+  - "B201"
+  - "B301"
+
+# Tests to skip
+skips:
+  - "B101"
+  - "B601"
