@@ -43,3 +43,12 @@ sentry-sdk = "^2.28.0"
 [tool.poetry.group.prod.dependencies]
 gunicorn = "^23.0.0"
 whitenoise = "^6.9.0"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "core.settings.dev"
+python_files = "test_*.py tests.py"
+python_functions = "test_*"
+addopts = "-ra"
+testpaths = [
+    "core/apps"
+]

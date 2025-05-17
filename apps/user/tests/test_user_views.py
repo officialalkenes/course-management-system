@@ -100,39 +100,6 @@ def test_change_status_succeeds_for_admin(admin_client, user, monkeypatch):
     assert resp.data["status"] == "SUSPENDED"
 
 
-# To be revisited: this is a bit of a hack
-# @pytest.mark.django_db
-# def test_email_verification_send_and_verify(auth_client, user, monkeypatch):
-#     """
-#     GET to /api/auth/email-verification/ enqueues an OTP task,
-#     POST with that OTP then succeeds.
-#     """
-
-#     # 1) patch the Celery task import in the view
-#     sent = []
-#     monkeypatch.setattr(
-#         "apps.user.views.send_otp_email_task.delay",
-#         lambda uid, otp, purpose: sent.append((uid, otp, purpose))
-#     )
-
-#     # 2) hard-code the actual path your URLs expose
-#     #    (replace this with whatever your real URL is)
-#     url = "/api/auth/email-verification/"
-
-#     # GET should enqueue
-#     resp = auth_client.get(url)
-#     assert resp.status_code == status.HTTP_200_OK
-#     assert sent and sent[0][0] == user.id
-
-#     # 3) POST back the real OTP and verify
-#     from apps.abstract.utils.accounts_utils import set_user_otp
-#     otp = set_user_otp(user)
-
-#     resp2 = auth_client.post(url, {"otp": otp}, format="json")
-#     assert resp2.status_code == status.HTTP_200_OK
-#     assert resp2.data["detail"] == "Email verified successfully."
-
-
 @pytest.mark.django_db
 def test_logout_blacklists_refresh(auth_client, user, monkeypatch):
     """
