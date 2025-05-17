@@ -1,0 +1,48 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Mypy for type checking (optional)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        exclude: migrations/ # Ignore the entire migrations directory
+
+  # Bandit for security checks (optional)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args:
+          # load your YAML config
+          - "-c"
+          - "bandit.yaml"
+          # Exclude tests properly - as a list of strings
+          - "--exclude"
+          - "tests/,test_*,migrations/,migrations/*"
+
+  # # Docformatter for clean docstrings (optional)
+  # - repo: https://github.com/pre-commit/mirrors-docformatter
+  #   rev: v1.7.5
+  #   hooks:
+  #     - id: docformatter
+
+  # Optionally include Black (if you want to enforce both)
+  # - repo: https://github.com/psf/black
+  #   rev: 24.4.2
+  #   hooks:
+  #     - id: black

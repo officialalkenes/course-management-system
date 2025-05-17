@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      DJANGO_SETTINGS_MODULE: core.settings.dev
+      DJANGO_ENVIRONMENT: dev
+      SECRET_KEY: test-secret
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      REDIS_URL: redis://localhost:6379/0
+
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Debug directory structure
+        run: |
+          pwd
+          echo "Project root contents:"
+          ls -la
+          echo "All manage.py files:"
+          find . -name "manage.py" -type f
+          echo "Directory structure:"
+          find . -type d | grep -v "__pycache__" | sort
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Poetry
+        uses: abatilo/actions-poetry@v3
+
+      - name: Install dependencies
+        run: poetry install --with dev --no-root
+
+      - name: Run Ruff (lint & format check)
+        run: |
+          poetry run ruff check .
+
+      - name: Run pre-commit hooks
+        run: poetry run pre-commit run
+
+
+      - name: Run migrations
+        run: |
+          poetry run python manage.py migrate
+
+      - name: Run tests (pytest)
+        run: |
+          poetry run pytest
