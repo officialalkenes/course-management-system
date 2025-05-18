@@ -63,3 +63,35 @@ class StudentOnboardingSerializer(serializers.ModelSerializer):
         instance.onboarding_completed = True
         instance.save()
         return instance
+
+
+class TeacherProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeacherProfile
+        fields = [
+            "id",
+            "bio",
+            "qualifications",
+            "specialization",
+            "years_of_experience",
+            "institution",
+            "department",
+            "is_verified",
+            "onboarding_completed",
+        ]
+
+
+class StudentProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentProfile
+        fields = [
+            "id",
+            "student_id",
+            "date_of_birth",
+            "grade_level",
+            "parent_guardian_name",
+            "parent_guardian_contact",
+            "school_name",
+            "academic_interests",
+            "onboarding_completed",
+        ]

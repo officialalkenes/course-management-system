@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 
 from apps.abstract.choices import StatusCHOICES
@@ -8,6 +10,12 @@ class BaseModel(models.Model):
     Abstract base model that provides common fields and methods for all models.
     """
 
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name="ID",
+    )
     status = models.CharField(
         max_length=20,
         choices=StatusCHOICES.choices,

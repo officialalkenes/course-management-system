@@ -2,10 +2,12 @@ from django.db import models
 
 from django.contrib.auth import get_user_model
 
+from apps.abstract.models import BaseModel
+
 User = get_user_model()
 
 
-class TeacherProfile(models.Model):
+class TeacherProfile(BaseModel):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="teacher_profile"
     )
@@ -28,7 +30,7 @@ class TeacherProfile(models.Model):
         return f"Teacher Profile for {self.user.email}"
 
 
-class StudentProfile(models.Model):
+class StudentProfile(BaseModel):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="student_profile"
     )
