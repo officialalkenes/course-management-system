@@ -18,8 +18,12 @@ DATABASES = {
         "PASSWORD": tmpPostgres.password,
         "HOST": tmpPostgres.hostname,
         "PORT": 5432,
+        "OPTIONS": {
+            "sslmode": "require",  # Add SSL requirement
+        },
     }
 }
+
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]  # noqa
