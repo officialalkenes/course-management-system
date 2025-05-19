@@ -3,15 +3,21 @@ import pytest
 from django.contrib.auth import get_user_model
 from apps.abstract.choices import UserType
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.test import APIClient
 
 from apps.profiles.models import StudentProfile, TeacherProfile
-
 
 fake = Faker()
 User = get_user_model()
 
 
-# tests/conftest.py
+# Add this fixture
+@pytest.fixture
+def api_client():
+    """Regular unauthenticated APIClient"""
+    return APIClient()
+
+
 @pytest.fixture
 def teacher_user(db):
     """A user with teacher role and profile"""
@@ -23,7 +29,6 @@ def teacher_user(db):
         user_type=UserType.TEACHER,
         is_active=True,
     )
-    # Use get_or_create to avoid duplicate profile creation
     TeacherProfile.objects.get_or_create(user=user)
     return user
 
@@ -39,7 +44,6 @@ def student_user(db):
         user_type=UserType.STUDENT,
         is_active=True,
     )
-    # Use get_or_create to avoid duplicate profile creation
     StudentProfile.objects.get_or_create(user=user)
     return user
 

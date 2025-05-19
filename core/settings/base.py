@@ -39,6 +39,7 @@ THIRD_PARTY_APPS = [
 
 
 LOCAL_APPS: list[str] = [
+    "apps.courses",
     "apps.profiles",
     "apps.user",
 ]

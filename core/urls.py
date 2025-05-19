@@ -11,6 +11,8 @@ from django.conf import settings
 urlpatterns = [
     # Always available regardless of schema
     path("api/auth/", include("apps.user.urls")),
+    path("api/profiles/", include("apps.profiles.urls")),
+    path("api/courses/", include("apps.courses.urls")),
 ]
 
 # Admin, tenant management, schema docs = public schema only

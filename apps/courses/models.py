@@ -36,13 +36,17 @@ class Course(BaseModel):
         return f"{self.code}: {self.title}"
 
     def clean(self):
-        """Validate that end_date is after start_date."""
-        if self.end_date and self.start_date and self.end_date < self.start_date:
-            raise ValidationError({"end_date": "End date cannot be before start date."})
+        """Validate course dates and other course-specific rules."""
+        super().clean()  # Call parent's clean method
 
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError(
+                {"end_date": "End date cannot be before the start date."}
+            )
+
+        # Optional: Validate start_date is not in the past for new courses
+        # if not self.pk and self.start_date and self.start_date < timezone.now().date():
+        #     raise ValidationError({'start_date': "Start date cannot be in the past for new courses."})
 
     @property
     def is_enrollment_active(self):
@@ -106,12 +110,18 @@ class Assignment(BaseModel):
 
     def clean(self):
         """Validate assignment dates."""
-        if self.due_date and self.due_date < timezone.now():
-            raise ValidationError({"due_date": "Due date cannot be in the past."})
+        super().clean()  # Call parent's clean method
+
+        # Prevent due date in the past only for new assignments
+        if not self.pk and self.due_date and self.due_date < timezone.now():
+            raise ValidationError(
+                {"due_date": "Due date cannot be in the past for new assignments."}
+            )
 
         if (
             self.allow_late_submissions
             and self.late_submission_deadline
+            and self.due_date  # ensure due_date is not None for comparison
             and self.late_submission_deadline < self.due_date
         ):
             raise ValidationError(
@@ -121,13 +131,13 @@ class Assignment(BaseModel):
             )
 
     def save(self, *args, **kwargs):
-        self.clean()
+        self.clean()  # Call model's clean method before saving
         super().save(*args, **kwargs)
 
     @property
     def is_past_due(self):
         """Check if the assignment is past due."""
-        return timezone.now() > self.due_date
+        return timezone.now() > self.due_date if self.due_date else False
 
     @property
     def can_accept_submission(self):
@@ -137,7 +147,7 @@ class Assignment(BaseModel):
         if self.allow_late_submissions:
             if self.late_submission_deadline:
                 return timezone.now() <= self.late_submission_deadline
-            return True
+            return True  # Late submissions allowed, no specific deadline means indefinitely
         return False
 
 
@@ -179,18 +189,20 @@ class Enrollment(BaseModel):
 
     def clean(self):
         """Validate enrollment."""
-        # Check if the course is accepting enrollments
-        if not self.course.is_enrollment_active and not self.pk:
+        super().clean()  # Call parent's clean method
+
+        # Check if the course is accepting enrollments (only for new enrollments)
+        if not self.pk and not self.course.is_enrollment_active:
             raise ValidationError(
                 "This course is not accepting enrollments at this time."
             )
 
-        # Check if the course is at capacity
-        if self.course.student_count >= self.course.max_students and not self.pk:
+        # Check if the course is at capacity (only for new enrollments)
+        if not self.pk and self.course.student_count >= self.course.max_students:
             raise ValidationError("This course has reached its enrollment capacity.")
 
     def save(self, *args, **kwargs):
-        self.clean()
+        self.clean()  # Call model's clean method before saving
         super().save(*args, **kwargs)
 
     def update_grade(self):
@@ -201,35 +213,45 @@ class Enrollment(BaseModel):
 
         if not submissions.exists():
             self.grade = None
-            self.save(update_fields=["grade"])
-            return
+        else:
+            total_weight = 0
+            weighted_score_sum = 0
 
-        total_weight = 0
-        weighted_score = 0
+            for submission in submissions:
+                assignment = submission.assignment
+                if (
+                    submission.points is not None and assignment.max_points > 0
+                ):  # ensure max_points > 0
+                    weight = float(assignment.weight)
+                    # Calculate score for this assignment (0 to 1 scale)
+                    score_fraction = submission.points / assignment.max_points
+                    weighted_score_sum += score_fraction * weight
+                    total_weight += weight
 
-        for submission in submissions:
-            assignment = submission.assignment
-            if submission.points is not None:
-                weight = float(assignment.weight)
-                score = submission.points / assignment.max_points
-                weighted_score += score * weight
-                total_weight += weight
+            if total_weight > 0:
+                final_grade = (weighted_score_sum / total_weight) * 100
+                self.grade = round(final_grade, 2)
+            else:
+                self.grade = None  # No weighted submissions found
 
-        if total_weight > 0:
-            final_grade = (weighted_score / total_weight) * 100
-            self.grade = round(final_grade, 2)
-            self.save(update_fields=["grade"])
+        self.save(update_fields=["grade"])
 
     def update_completion(self):
         """Update the completion percentage based on submitted assignments."""
         total_assignments = self.course.assignments.count()
         if total_assignments == 0:
-            self.completion_percentage = 0
+            self.completion_percentage = 0.0  # Ensure it's a float/decimal
         else:
-            completed = Submission.objects.filter(
-                student=self.student, assignment__course=self.course
-            ).count()
-            self.completion_percentage = (completed / total_assignments) * 100
+            completed_assignments = (
+                Submission.objects.filter(
+                    student=self.student, assignment__course=self.course
+                )
+                .distinct("assignment")
+                .count()
+            )  # Count distinct assignments submitted
+            self.completion_percentage = round(
+                (completed_assignments / total_assignments) * 100, 2
+            )
 
         self.save(update_fields=["completion_percentage"])
 
@@ -247,7 +269,6 @@ class Submission(BaseModel):
     is_reviewed = models.BooleanField(default=False)
     feedback = models.TextField(blank=True, null=True)
 
-    # Additional fields
     attachment = models.FileField(upload_to="submissions/", null=True, blank=True)
     is_late = models.BooleanField(
         default=False,
@@ -269,38 +290,62 @@ class Submission(BaseModel):
 
     def clean(self):
         """Validate submission."""
+        super().clean()  # Call parent's clean method
+
         # Check if the student is enrolled in the course
         if not Enrollment.objects.filter(
             student=self.student, course=self.assignment.course, is_active=True
         ).exists():
             raise ValidationError(
-                "You must be enrolled in the course to submit an assignment."
+                "You must be enrolled in the course to submit this assignment."
             )
 
-        # Check if the assignment can accept submissions
-        if not self.assignment.can_accept_submission and not self.pk:
-            if self.assignment.allow_late_submissions:
+        # Check if the assignment can accept submissions (only for new submissions)
+        if not self.pk and not self.assignment.can_accept_submission:
+            if (
+                self.assignment.is_past_due
+                and not self.assignment.allow_late_submissions
+            ):
                 raise ValidationError(
-                    "This assignment is no longer accepting submissions."
+                    "This assignment is past its due date and does not allow late submissions."
                 )
-            else:
-                raise ValidationError("This assignment is past its due date.")
+            elif (
+                self.assignment.allow_late_submissions
+                and self.assignment.late_submission_deadline
+                and timezone.now() > self.assignment.late_submission_deadline
+            ):
+                raise ValidationError(
+                    "This assignment is past its late submission deadline."
+                )
+            else:  # General case if can_accept_submission is false for other reasons
+                raise ValidationError(
+                    "This assignment is currently not accepting submissions."
+                )
 
         # Check if attachment is required but not provided
         if self.assignment.attachment_required and not self.attachment:
             raise ValidationError("This assignment requires an attachment.")
 
     def save(self, *args, **kwargs):
-        # Set is_late flag if submitting after the due date
-        if not self.pk:  # Only check on creation
-            self.is_late = timezone.now() > self.assignment.due_date
+        self.full_clean()  # Call full_clean to run clean() and other validations (unique_together, etc.)
 
-        super().save(*args, **kwargs)
+        if not self.pk:  # Only set is_late on initial creation
+            if self.assignment.due_date:
+                self.is_late = timezone.now() > self.assignment.due_date
+            else:
+                self.is_late = False  # Default if assignment has no due date (should be handled by Assignment validation)
 
-        # Update enrollment grade and completion after submission
-        enrollment = Enrollment.objects.get(
-            student=self.student, course=self.assignment.course
-        )
-        enrollment.update_completion()
-        if self.is_reviewed:
-            enrollment.update_grade()
+        super().save(*args, **kwargs)  # Save the instance first
+
+        # Update enrollment after submission is saved
+        try:
+            enrollment = Enrollment.objects.get(
+                student=self.student, course=self.assignment.course
+            )
+            enrollment.update_completion()
+            if self.is_reviewed:  # Only update grade if submission is reviewed
+                enrollment.update_grade()
+        except Enrollment.DoesNotExist:
+            # This should ideally be caught by self.clean()
+            # Consider logging this if it occurs
+            pass
